@@ -6,15 +6,14 @@
 #include <ctype.h>
 #include <math.h>
 
-const char *optString = "k:cdh";
+const char *optString = "h";
 
 char *outputString = NULL;
+char *envVariable = NULL;
 int endOfOutputString = 0;
+int endOfENVVariable = 0;
 
 struct globalArgs_t {
-  bool optionEncode;
-  bool optionDecode;
-  char* key;
   char* inputPath;
   char* outputPath;
   FILE* inputFile;
@@ -27,38 +26,58 @@ void addCharToOutput(char target_char) {
   outputString[endOfOutputString-1] = target_char;
 }
 
-void startJob() {
-  char inChar;
-  char outChar;
-  int index = 0;
-  int len;
-  int n = 127 - 32 + 1;
+void addCharToENVVar(char target_char) {
+  endOfENVVariable++;
+  envVariable = realloc(envVariable, endOfENVVariable * sizeof(char));
+  envVariable[endOfENVVariable-1] = target_char;
+  //printf("%d - %c\n", strlen(envVariable), envVariable[endOfENVVariable-1] );
+}
 
-  len = strlen(globalArgs.key);
+void addENVToOUTPUT() {
+  char *envpointer;
+  int envValLen;
+  int envNameLen;
+  if (getenv(envVariable)) {
+    envpointer = getenv(envVariable);
+    envValLen = strlen(envpointer);
+    for (int i = 0; i < envValLen; i++) {
+      addCharToOutput(envpointer[i]);
+    }
+    envVariable = realloc(envVariable, sizeof(NULL));
+    endOfENVVariable = 0;
+  } else {
+    addCharToOutput('X');
+  }
+}
+
+void startJob() {
+  short int state = 0; // 0 - чтение текста, 1 - чтение переменной, 2 - конец чтения переменной
+  char inChar;
 
   while (!feof(globalArgs.inputFile)){
     fscanf(globalArgs.inputFile,"%c",&inChar);
-    if (globalArgs.optionEncode) {
-        if (inChar >= 32 && inChar <= 127){
-          outChar = (((inChar - 32) + (globalArgs.key[index] - 32)) % 96) + 32; //Формула для шифровки символа
-          index++;
-          if (index == len) index = 0;
-        } else outChar = inChar;
-        addCharToOutput(outChar);
-    } else if (globalArgs.optionDecode) {
-      if (inChar >= 32 && inChar <= 127){
-        outChar = (((inChar - 32) - (globalArgs.key[index] - 32) + n) % n) + 32; //Формула для расшифровки символа
-        index++;
-        if (index == len) index = 0;
-      } else outChar = inChar;
-      addCharToOutput(outChar);
+    if (inChar == '$') {
+      state = 1;
+    } else if ((inChar == ' ' || inChar == '\n' || inChar == '\0') && (state == 1)) {
+      state = 2;
+    }
+    if (state == 1) {
+      if (inChar != '$') {
+        addCharToENVVar(inChar);
+      }
+    } else if (state == 2) {
+      addENVToOUTPUT();
+      state = 0;
+    }
+    if (state == 0) {
+      addCharToOutput(inChar);
     }
   }
 }
 
 void display_usage(char* name) {
   //Отображение странички с помощью
-  printf("\nUSAGE:\n%s [-h] [-k <key word>] [-d] [-c] \n\nARGS: \n-k: Key word \n-c: Encoding\n-d: Decoding\n-h: Help\n\n", name);
+  printf("\nUSAGE:\n%s [-h] \n\nARGS: \n-h: Help\n\n", name);
   exit(EXIT_SUCCESS);
 }
 
@@ -69,15 +88,6 @@ int getStartData(int argc, char** argv) {
   opt = getopt(argc, argv, optString);
   while (opt != -1) {
     switch (opt) {
-      case 'k':
-        globalArgs.key = optarg;
-        break;
-      case 'd':
-        globalArgs.optionDecode = true;
-        break;
-      case 'c':
-        globalArgs.optionEncode = true;
-        break;
       case 'h':
         display_usage(argv[0]);
         break;
@@ -95,24 +105,21 @@ int getStartData(int argc, char** argv) {
     }
   }
 
-  //Проверка на верно введенные данные
-  if (globalArgs.optionDecode == globalArgs.optionEncode) {
-    fprintf(stderr, "Encode and Decode options are same!\n");
-    exit(EXIT_FAILURE);
-  }
-  if (globalArgs.key == NULL) {
-    fprintf(stderr, "Can not run without key!\n");
-    exit(EXIT_FAILURE);
-  }
+  // //Проверка на верно введенные данные
+  // if (globalArgs.optionDecode == globalArgs.optionEncode) {
+  //   fprintf(stderr, "Encode and Decode options are same!\n");
+  //   exit(EXIT_FAILURE);
+  // }
+  // if (globalArgs.key == NULL) {
+  //   fprintf(stderr, "Can not run without key!\n");
+  //   exit(EXIT_FAILURE);
+  // }
   return 1;
 }
 
 int main(int argc, char** argv) {
 
   //Инициализация структуры
-  globalArgs.optionEncode = false;
-  globalArgs.optionDecode = false;
-  globalArgs.key = NULL;
   globalArgs.inputPath = NULL;
   globalArgs.outputPath = NULL;
 
@@ -137,9 +144,6 @@ int main(int argc, char** argv) {
   } else {
     globalArgs.inputFile = stdin;
   }
-
-  char* sentence;
-  int stringNumber = 1;
 
   startJob();
 
