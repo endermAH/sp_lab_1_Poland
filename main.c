@@ -31,7 +31,6 @@ void addCharToENVVar(char target_char) {
   envVariable = realloc(envVariable, endOfENVVariable * sizeof(char));
   envVariable[endOfENVVariable-1] = target_char;
   envVariable[endOfENVVariable] = '\0';
-  puts(envVariable);
 }
 
 void addENVToOUTPUT() {
