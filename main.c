@@ -30,7 +30,8 @@ void addCharToENVVar(char target_char) {
   endOfENVVariable++;
   envVariable = realloc(envVariable, endOfENVVariable * sizeof(char));
   envVariable[endOfENVVariable-1] = target_char;
-  //printf("%d - %c\n", strlen(envVariable), envVariable[endOfENVVariable-1] );
+  envVariable[endOfENVVariable] = '\0';
+  puts(envVariable);
 }
 
 void addENVToOUTPUT() {
@@ -43,10 +44,12 @@ void addENVToOUTPUT() {
     for (int i = 0; i < envValLen; i++) {
       addCharToOutput(envpointer[i]);
     }
-    envVariable = realloc(envVariable, sizeof(NULL));
+    envVariable = NULL;
     endOfENVVariable = 0;
   } else {
-    addCharToOutput('X');
+    addCharToOutput('X'); //Добавляет крест вместо неправильной переменной
+    envVariable = NULL;
+    endOfENVVariable = 0;
   }
 }
 
