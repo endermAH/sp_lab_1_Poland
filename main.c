@@ -46,7 +46,10 @@ void addENVToOUTPUT() {
     envVariable = NULL;
     endOfENVVariable = 0;
   } else {
-    addCharToOutput('X'); //Добавляет крест вместо неправильной переменной
+    addCharToOutput('$');
+    for (int i = 0; i < endOfENVVariable; i++) {
+      addCharToOutput(envVariable[i]);
+    }
     envVariable = NULL;
     endOfENVVariable = 0;
   }
@@ -58,15 +61,14 @@ void startJob() {
 
   while (!feof(globalArgs.inputFile)){
     fscanf(globalArgs.inputFile,"%c",&inChar);
-    if (inChar == '$') {
+    if (inChar == '$' && state != 1) {
       state = 1;
+      continue;
     } else if ((inChar == ' ' || inChar == '\n' || inChar == '\0') && (state == 1)) {
       state = 2;
     }
     if (state == 1) {
-      if (inChar != '$') {
-        addCharToENVVar(inChar);
-      }
+      addCharToENVVar(inChar);
     } else if (state == 2) {
       addENVToOUTPUT();
       state = 0;
